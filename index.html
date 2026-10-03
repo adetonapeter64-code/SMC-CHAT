@@ -7,33 +7,42 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#0e1117;--card:#161b22;--tx:#d7dde5;--mut:#7d8896;--up:#26a69a;--dn:#ef5350}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{box-sizing:border-box;--bg:#0e1117;--card:#161b22;--tx:#d7dde5;--mut:#7d8896;--up:#26a69a;--dn:#ef5350}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
-.w{max-width:900px;margin:0 auto;padding:10px}
-.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-select,button,textarea{background:var(--card);color:var(--tx);border:1px solid #2a323d;border-radius:8px;padding:7px 10px;font:inherit}
-button.on{background:#2f6feb;border-color:#2f6feb}
-.st{margin-left:auto;font-size:12px;color:var(--mut)}
-canvas{width:100%;height:400px;background:var(--card);border-radius:10px;display:block;touch-action:none;user-select:none}
-.card{background:var(--card);border-radius:10px;padding:10px;margin-top:8px}
-.tf{display:flex;gap:5px;overflow-x:auto;margin-bottom:6px}.tf div{flex:1;min-width:54px;background:var(--card);border:1px solid transparent;border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;color:var(--mut);cursor:pointer}.tf .cur{border-color:#2f6feb;color:var(--tx)}
-.tf b{display:block;font-size:14px;margin-top:1px}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:14px system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+#pChart{flex:1;min-height:0;display:flex;flex-direction:column}
+#top{display:flex;align-items:center;gap:8px;padding:6px 8px}
+select,button,textarea,input{background:var(--card);color:var(--tx);border:1px solid #2a323d;border-radius:8px;padding:7px 10px;font:inherit}
+#top select{font-weight:600;font-size:15px}
+.st{margin-left:auto;font-size:11px;color:var(--mut);text-align:right;line-height:1.2}
+.tf{display:flex;gap:4px;overflow-x:auto;padding:0 8px 6px}
+.tf div{flex:none;min-width:48px;background:var(--card);border:1px solid transparent;border-radius:8px;padding:4px 6px;text-align:center;font-size:11px;color:var(--mut)}
+.tf b{display:block;font-size:12px}.tf .cur{border-color:#2f6feb;color:var(--tx)}
+#chartWrap{flex:1;min-height:0;position:relative}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;user-select:none}
+#tools{position:absolute;right:64px;top:34px;display:flex;flex-direction:column;gap:6px}
+#tools button{width:36px;height:36px;padding:0;border-radius:50%;background:rgba(22,27,34,.85);font-size:16px}
+.page{display:none;flex:1;overflow:auto;padding:14px}
+.page h3{margin:0 0 10px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+#nav{display:flex;border-top:1px solid #222a35;background:#0b0e13;padding-bottom:env(safe-area-inset-bottom,0px)}
+#nav button{flex:1;border:0;border-radius:0;background:none;color:var(--mut);padding:8px 0 6px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+#nav button span{font-size:18px}#nav button.on{color:#2f6feb}
 .bull{color:var(--up)}.bear{color:var(--dn)}
-h3{margin:0 0 6px;font-size:13px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-textarea{width:100%;height:150px;font:12.5px ui-monospace,Menlo,monospace;resize:vertical}
-#log{font:12px ui-monospace,monospace;color:var(--mut);margin-top:6px;white-space:pre-wrap}
-li{margin:3px 0}ul{margin:4px 0;padding-left:18px}
-</style></head><body><div class="w">
-<div class="row">
-<select id="sym"></select><input id="key" placeholder="Twelve Data key (forex)" style="width:150px;background:var(--card);color:var(--tx);border:1px solid #2a323d;border-radius:8px;padding:7px 10px;font:inherit"><button id="go">Connect</button>
-<span class="st" id="status">connecting…</span></div>
+textarea{width:100%;height:55%;font:12.5px ui-monospace,Menlo,monospace}
+#key{width:100%;margin:8px 0}
+#log{font:12px ui-monospace,monospace;color:var(--mut);margin-top:8px;white-space:pre-wrap}
+li{margin:4px 0}ul{padding-left:18px}
+a{color:#2f6feb}
+</style></head><body><div id="app">
+<div id="pChart">
+<div id="top"><select id="sym"></select><span class="st" id="status">connecting…</span></div>
 <div class="tf" id="tfs"></div>
-<div class="row" style="margin:6px 0"><button onclick="zoom(.75)">＋</button><button onclick="zoom(1.33)">－</button><button onclick="goBack(1)">◀</button><button onclick="goBack(-1)">▶</button><button onclick="latest()">Latest ⏭</button><span class="st">drag · pinch · wheel</span></div>
-<canvas id="cv"></canvas>
-<div class="card"><h3>Top-down bias · 1D → 1H → chart TF</h3><div id="verdict"></div></div>
-<div class="card"><h3>Pine Script indicator</h3>
+<div id="chartWrap"><canvas id="cv"></canvas>
+<div id="tools"><button onclick="zoom(.75)">＋</button><button onclick="zoom(1.33)">－</button><button onclick="goBack(1)">◀</button><button onclick="goBack(-1)">▶</button><button onclick="latest()">⏭</button></div></div>
+</div>
+<div class="page" id="pBias"><h3>Top-down bias · 1D → 1H → chart TF</h3><div id="verdict"></div></div>
+<div class="page" id="pPine"><h3>Pine Script indicator</h3>
 <textarea id="pine" spellcheck="false">//@version=5
 indicator("EMA Cross", overlay=true)
 fast = ta.ema(close, 20)
@@ -41,14 +50,19 @@ slow = ta.ema(close, 50)
 plot(fast, color=color.aqua)
 plot(slow, color=color.orange)
 // try: r = ta.rsi(close, 14)  plot(r, color=color.purple)</textarea>
-<div class="row" style="margin:8px 0 0"><button id="run">Add to chart</button><button id="clr">Clear</button></div>
-<div id="log"></div></div>
+<div style="display:flex;gap:8px;margin-top:8px"><button id="run">Add to chart</button><button id="clr">Clear</button></div><div id="log"></div></div>
+<div class="page" id="pSet"><h3>Data source</h3>
+<p>Crypto (BTCUSDT etc.) needs no key.<br>Forex and gold need a free key from <a href="https://twelvedata.com" target="_blank">twelvedata.com</a>.</p>
+<input id="key" placeholder="Paste Twelve Data API key"><button id="go">Connect</button></div>
+<div id="nav"><button onclick="show('Chart')" data-p="Chart" class="on"><span>📈</span>Chart</button><button onclick="show('Bias')" data-p="Bias"><span>🧭</span>Bias</button><button onclick="show('Pine')" data-p="Pine"><span>🧩</span>Indicators</button><button onclick="show('Set')" data-p="Set"><span>⚙️</span>Settings</button></div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
+function show(p){['Chart','Bias','Pine','Set'].forEach(n=>{$('p'+n).style.display=n===p?(n==='Chart'?'flex':'block'):'none'});document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));if(p==='Chart')draw()}
+
 const ALL=['1d','4h','1h','30m','15m','5m','1m'];
 const MS={'1m':6e4,'5m':3e5,'15m':9e5,'30m':18e5,'1h':36e5,'4h':144e5,'1d':864e5};
-let D={},AN={},tf='15m',vis=70,pan=0,vShift=0,live=false,ws=null,plots=[],simTimer=null,pineSrc='',hov=null,dirty=false;
+let D={},AN={},tf='15m',vis=70,pan=0,vShift=0,vScale=1,live=false,ws=null,plots=[],simTimer=null,pineSrc='',hov=null,dirty=false;
 async function load(sym,t){
   const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${t}&limit=500`);
   return (await r.json()).map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4]}));
@@ -73,7 +87,7 @@ async function loadTD(sym,t,n=500){
 const merge=(a,c)=>{const L=a[a.length-1];if(L.t===c.t)a[a.length-1]=c;else if(c.t>L.t)a.push(c)};
 async function start(){
   clearInterval(simTimer);if(ws){ws.onclose=null;ws.close()}
-  const sym=$('sym').value,isC=sym.endsWith('USDT'),hasKey=!!$('key').value.trim();pan=0;vShift=0;
+  const sym=$('sym').value,isC=sym.endsWith('USDT'),hasKey=!!$('key').value.trim();pan=0;vShift=0;vScale=1;
   try{
     if(isC){
       const r=await Promise.all(ALL.map(t=>load(sym,t)));ALL.forEach((t,i)=>D[t]=r[i]);
@@ -99,20 +113,23 @@ async function start(){
 function clampView(){const n=(D[tf]||[]).length;vis=Math.round(Math.max(15,Math.min(vis,Math.max(n,15),500)));pan=Math.max(-vis*.6,Math.min(pan,n-vis*.75))}
 function zoom(f){vis*=f;clampView();draw()}
 function goBack(d){pan+=d*vis/3;clampView();draw()}
-function latest(){pan=0;vShift=0;draw()}
-function setTf(t){tf=t;pan=0;vShift=0;refresh()}
-const cvEl=$('cv'),P=new Map();let pd0=0,lx=0,ly=0;
-cvEl.addEventListener('pointerdown',e=>{cvEl.setPointerCapture(e.pointerId);P.set(e.pointerId,e.clientX);lx=e.clientX;ly=e.clientY;if(P.size==2){const v=[...P.values()];pd0=Math.abs(v[0]-v[1])}});
+function latest(){pan=0;vShift=0;vScale=1;draw()}
+function setTf(t){tf=t;pan=0;vShift=0;vScale=1;refresh()}
+const cvEl=$('cv'),P=new Map();let pd0=0;
+const pts=()=>[...P.values()],axisMode=()=>P.size===2&&pts().every(p=>p.ax);
+const metric=()=>{const v=pts();return axisMode()?Math.abs(v[0].y-v[1].y):Math.abs(v[0].x-v[1].x)};
+cvEl.addEventListener('pointerdown',e=>{if(e.isPrimary)P.clear();try{cvEl.setPointerCapture(e.pointerId)}catch(_){}P.set(e.pointerId,{x:e.clientX,y:e.clientY,ax:e.offsetX>cvEl.clientWidth-58});if(P.size===2)pd0=metric()});
 cvEl.addEventListener('pointermove',e=>{
+  const o=P.get(e.pointerId);
+  if(!o){hov=e.pointerType==='mouse'?e.offsetX:null;draw();return}
   const cwid=(cvEl.clientWidth-58)/vis;
-  if(P.has(e.pointerId)){P.set(e.pointerId,e.clientX);
-    if(P.size===2){const v=[...P.values()],d=Math.abs(v[0]-v[1]);if(pd0>10&&d>10){vis=vis*pd0/d;pd0=d}}
-    else{pan+=(e.clientX-lx)/cwid;lx=e.clientX;vShift+=(e.clientY-ly)/(cvEl.clientHeight-16);ly=e.clientY}
-    hov=null;clampView();
-  }else hov=e.offsetX;
-  draw()});
-['pointerup','pointercancel'].forEach(n=>cvEl.addEventListener(n,e=>{P.delete(e.pointerId);pd0=0;lx=e.clientX}));
-cvEl.addEventListener('pointerleave',()=>{hov=null;draw()});
+  if(P.size===1){if(o.ax)vScale*=Math.exp(-(e.clientY-o.y)/150);else{pan+=(e.clientX-o.x)/cwid;vShift+=(e.clientY-o.y)/(cvEl.clientHeight-16)}}
+  o.x=e.clientX;o.y=e.clientY;
+  if(P.size===2){const d=metric(),ax=axisMode();if(pd0>20&&d>20&&Math.abs(d-pd0)>4){if(ax)vScale*=pd0/d;else vis=vis*pd0/d;pd0=d}}
+  vScale=Math.max(.1,Math.min(10,vScale));hov=null;clampView();draw()});
+const up=e=>{P.delete(e.pointerId);pd0=P.size===2?metric():0};
+['pointerup','pointercancel','lostpointercapture'].forEach(n=>cvEl.addEventListener(n,up));
+cvEl.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){hov=null;draw()}});
 cvEl.addEventListener('wheel',e=>{e.preventDefault();if(Math.abs(e.deltaX)>Math.abs(e.deltaY))pan-=e.deltaX/8;else vis*=e.deltaY>0?1.1:.9;clampView();draw()},{passive:false});
 
 // ---------- SMC ----------
@@ -213,16 +230,17 @@ function applyPine(){
 function draw(){
   const cv=$('cv'),dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
   cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
-  const c=D[tf];if(!c||!c.length)return;clampView();
+  const c=D[tf];if(!c||!c.length||W<50||H<80)return;clampView();
   const A=AN[tf]||(AN[tf]=smc(c)),N=vis,off=Math.max(0,Math.round(c.length-vis*.75-pan)),s=c.slice(off,off+N);
   const mc=s.reduce((a,x)=>a+x.c,0)/s.length;
   plots.forEach(p=>{const v=p.vals.slice(off,off+N).filter(x=>x!==null),m=v.length?v.reduce((a,b)=>a+b,0)/v.length:mc;
     p.ov=m>mc*.5&&m<mc*2;p.lo=v.length?Math.min(...v):0;p.hi=v.length?Math.max(...v):1});
   const sub=plots.some(p=>!p.ov),AX=16,PW=58,Hh=H-AX,mainH=sub?Hh*.72:Hh,cw=(W-PW)/N,R=W-PW;
-  let hi=Math.max(...s.map(x=>x.h)),lo=Math.min(...s.map(x=>x.l));const pd=(hi-lo)*.08||1;hi+=pd;lo-=pd;{const rg=hi-lo;hi+=vShift*rg;lo+=vShift*rg}
-  const X=i=>(i-off+.5)*cw,Y=p=>6+(hi-p)/(hi-lo)*(mainH-12),dec=hi>100?1:hi>1?3:5;
+  let hi=Math.max(...s.map(x=>x.h)),lo=Math.min(...s.map(x=>x.l));const pd=(hi-lo)*.08||1;hi+=pd;lo-=pd;{const mid=(hi+lo)/2,hf=(hi-lo)/2*vScale;hi=mid+hf;lo=mid-hf;const rg=hi-lo;hi+=vShift*rg;lo+=vShift*rg}
+  const X=i=>(i-off+.5)*cw,Y=p=>6+(hi-p)/(hi-lo)*(mainH-12),dec=hi>1000?2:hi>20?3:hi>2?4:5;
   g.font='10px system-ui';g.lineWidth=1;g.strokeStyle='#222a35';g.fillStyle='#7d8896';
-  for(let k=0;k<=5;k++){const p=lo+(hi-lo)*k/5,y=Y(p);g.beginPath();g.moveTo(0,y);g.lineTo(R,y);g.stroke();g.fillText(p.toFixed(dec),R+4,y+3)}
+  {const raw=(hi-lo)/Math.max(4,Math.floor(mainH/40)),mag=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*mag).find(x=>x>=raw)||raw;
+    for(let v=Math.ceil(lo/st)*st;v<hi;v+=st){const y=Y(v);if(y<8||y>mainH-4)continue;g.beginPath();g.moveTo(0,y);g.lineTo(R,y);g.stroke();g.fillText(v.toFixed(dec),R+4,y+3)}}
   g.save();g.beginPath();g.rect(0,0,R,mainH);g.clip();
   if(A.H&&A.L){const eq=(A.H.v+A.L.v)/2;
     g.fillStyle='rgba(239,83,80,.07)';g.fillRect(0,Y(A.H.v),R,Y(eq)-Y(A.H.v));
@@ -263,9 +281,9 @@ function draw(){
 }
 function refresh(){ALL.forEach(t=>AN[t]=smc(D[t]));panel();applyPine();draw()}
 
-$('run').onclick=()=>{pineSrc=$('pine').value;refresh()};
-$('clr').onclick=()=>{pineSrc='';plots=[];$('log').textContent='';draw()};
-$('sym').onchange=start;$('go').onclick=()=>{try{localStorage.setItem('tdkey',$('key').value.trim())}catch(e){}start()};try{$('key').value=localStorage.getItem('tdkey')||''}catch(e){}
+$('run').onclick=()=>{pineSrc=$('pine').value;refresh();show('Chart')};
+$('clr').onclick=()=>{pineSrc='';plots=[];$('log').textContent='Cleared.';draw()};
+$('sym').onchange=start;$('go').onclick=()=>{try{localStorage.setItem('tdkey',$('key').value.trim())}catch(e){}start();show('Chart')};try{$('key').value=localStorage.getItem('tdkey')||''}catch(e){}
 addEventListener('resize',draw);
 start();
 setInterval(draw,1000);
