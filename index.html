@@ -27,7 +27,7 @@ textarea{width:100%;height:150px;font:12.5px ui-monospace,Menlo,monospace;resize
 li{margin:3px 0}ul{margin:4px 0;padding-left:18px}
 </style></head><body><div class="w">
 <div class="row">
-<select id="sym"></select><input id="key" placeholder="Twelve Data key (forex)" style="width:150px;background:var(--card);color:var(--tx);border:1px solid #2a323d;border-radius:8px;padding:7px 10px;font:inherit">
+<select id="sym"></select><input id="key" placeholder="Twelve Data key (forex)" style="width:150px;background:var(--card);color:var(--tx);border:1px solid #2a323d;border-radius:8px;padding:7px 10px;font:inherit"><button id="go">Connect</button>
 <span class="st" id="status">connecting…</span></div>
 <div class="tf" id="tfs"></div>
 <div class="row" style="margin:6px 0"><button onclick="zoom(.75)">＋</button><button onclick="zoom(1.33)">－</button><button onclick="goBack(1)">◀</button><button onclick="goBack(-1)">▶</button><button onclick="latest()">Latest ⏭</button><span class="st">drag · pinch · wheel</span></div>
@@ -90,7 +90,7 @@ async function start(){
     $('status').style.color='#26a69a';
   }catch(e){
     const b=base(sym);ALL.forEach(t=>D[t]=sim(t,b));
-    $('status').textContent='◌ SIMULATED'+(isC?' (no exchange access)':' (forex needs a data key)');$('status').style.color='#f0b429';
+    $('status').textContent='◌ SIMULATED'+(isC?' (no exchange access)':' (forex needs a data key)')+(e.message&&e.message!=='no source'?' – '+e.message:'');$('status').style.color='#f0b429';
     simTimer=setInterval(()=>{ALL.forEach(t=>{const a=D[t],L=a[a.length-1],p=L.c*(1+(Math.random()-.5)*.0006);L.c=p;L.h=Math.max(L.h,p);L.l=Math.min(L.l,p)});refresh()},1000);
   }
   refresh();
@@ -265,7 +265,7 @@ function refresh(){ALL.forEach(t=>AN[t]=smc(D[t]));panel();applyPine();draw()}
 
 $('run').onclick=()=>{pineSrc=$('pine').value;refresh()};
 $('clr').onclick=()=>{pineSrc='';plots=[];$('log').textContent='';draw()};
-$('sym').onchange=start;
+$('sym').onchange=start;$('go').onclick=()=>{try{localStorage.setItem('tdkey',$('key').value.trim())}catch(e){}start()};try{$('key').value=localStorage.getItem('tdkey')||''}catch(e){}
 addEventListener('resize',draw);
 start();
 setInterval(draw,1000);
