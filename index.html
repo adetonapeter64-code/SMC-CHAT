@@ -36,7 +36,7 @@ li{margin:4px 0}ul{padding-left:18px}
 a{color:#2f6feb}
 </style></head><body><div id="app">
 <div id="pChart">
-<div id="top"><select id="sym"></select><span class="st" id="status">connecting…</span></div>
+<div id="top"><select id="sym"></select><button id="modeBtn" style="font-weight:700;font-size:12px;padding:8px 10px;white-space:nowrap"></button><span class="st" id="status">connecting…</span></div>
 <div class="tf" id="tfs"></div>
 <div id="chartWrap"><canvas id="cv"></canvas>
 <div id="tools"><button onclick="zoom(.75)">＋</button><button onclick="zoom(1.33)">－</button><button onclick="goBack(1)">◀</button><button onclick="goBack(-1)">▶</button><button onclick="latest()">⏭</button></div></div>
@@ -51,7 +51,7 @@ plot(fast, color=color.aqua)
 plot(slow, color=color.orange)
 // try: r = ta.rsi(close, 14)  plot(r, color=color.purple)</textarea>
 <div style="display:flex;gap:8px;margin-top:8px"><button id="run">Add to chart</button><button id="clr">Clear</button></div><div id="log"></div></div>
-<div class="page" id="pSet"><h3>Data source</h3>
+<div class="page" id="pSet"><h3>Mode</h3><div style="display:flex;gap:8px"><button id="mReal" style="flex:1">Real market</button><button id="mSim" style="flex:1">Simulate</button></div><p style="color:var(--mut);font-size:12px">Real = live market prices only (shows an error if it cannot connect, never fake data). Simulate = fake prices for practising the tools.</p><h3 style="margin-top:18px">Data source</h3>
 <p>Crypto (BTCUSDT etc.) needs no key.<br>Forex and gold need a free key from <a href="https://twelvedata.com" target="_blank">twelvedata.com</a>.</p>
 <input id="key" placeholder="Paste Twelve Data API key"><button id="go">Connect</button></div>
 <div id="nav"><button onclick="show('Chart')" data-p="Chart" class="on"><span>📈</span>Chart</button><button onclick="show('Bias')" data-p="Bias"><span>🧭</span>Bias</button><button onclick="show('Pine')" data-p="Pine"><span>🧩</span>Indicators</button><button onclick="show('Set')" data-p="Set"><span>⚙️</span>Settings</button></div>
@@ -62,7 +62,7 @@ function show(p){['Chart','Bias','Pine','Set'].forEach(n=>{$('p'+n).style.displa
 
 const ALL=['1d','4h','1h','30m','15m','5m','1m'];
 const MS={'1m':6e4,'5m':3e5,'15m':9e5,'30m':18e5,'1h':36e5,'4h':144e5,'1d':864e5};
-let D={},AN={},tf='15m',vis=70,pan=0,vShift=0,vScale=1,live=false,ws=null,plots=[],simTimer=null,pineSrc='',hov=null,dirty=false;
+let D={},AN={},simMode=false,failMsg='',mode=(()=>{try{return localStorage.getItem('mode')||'real'}catch(e){return 'real'}})(),tf='15m',vis=70,pan=0,vShift=0,vScale=1,live=false,ws=null,plots=[],simTimer=null,pineSrc='',hov=null,dirty=false;
 async function load(sym,t){
   const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${t}&limit=500`);
   return (await r.json()).map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4]}));
@@ -87,8 +87,9 @@ async function loadTD(sym,t,n=500){
 const merge=(a,c)=>{const L=a[a.length-1];if(L.t===c.t)a[a.length-1]=c;else if(c.t>L.t)a.push(c)};
 async function start(){
   clearInterval(simTimer);if(ws){ws.onclose=null;ws.close()}
-  const sym=$('sym').value,isC=sym.endsWith('USDT'),hasKey=!!$('key').value.trim();pan=0;vShift=0;vScale=1;
+  const sym=$('sym').value,isC=sym.endsWith('USDT'),hasKey=!!$('key').value.trim();simMode=false;failMsg='';pan=0;vShift=0;vScale=1;
   try{
+    if(mode==='sim')throw Error('sim');
     if(isC){
       const r=await Promise.all(ALL.map(t=>load(sym,t)));ALL.forEach((t,i)=>D[t]=r[i]);
       $('status').textContent='● LIVE '+sym;
@@ -103,9 +104,12 @@ async function start(){
     }else throw Error('no source');
     $('status').style.color='#26a69a';
   }catch(e){
-    const b=base(sym);ALL.forEach(t=>D[t]=sim(t,b));
-    $('status').textContent='◌ SIMULATED'+(isC?' (no exchange access)':' (forex needs a data key)')+(e.message&&e.message!=='no source'?' – '+e.message:'');$('status').style.color='#f0b429';
-    simTimer=setInterval(()=>{ALL.forEach(t=>{const a=D[t],L=a[a.length-1],p=L.c*(1+(Math.random()-.5)*.0006);L.c=p;L.h=Math.max(L.h,p);L.l=Math.min(L.l,p)});refresh()},1000);
+    if(mode==='real'){
+      failMsg=isC?'Could not reach Binance ('+(e.message||'blocked')+'). It may be blocked in your country or offline.':(e.message==='no source'?'Forex and gold need a Twelve Data key. Go to Settings, paste it, tap Connect.':'Twelve Data: '+e.message);
+      ALL.forEach(t=>D[t]=[]);$('status').textContent='✖ NO REAL DATA';$('status').style.color='#ef5350';refresh();return}
+    simMode=true;const b=base(sym);ALL.forEach(t=>D[t]=sim(t,b));
+    $('status').textContent='◌ SIMULATE MODE (fake prices)';$('status').style.color='#f0b429';
+    simTimer=setInterval(()=>{ALL.forEach(t=>{const a=D[t];let L=a[a.length-1];while(Date.now()>=L.t+MS[t]){a.push({t:L.t+MS[t],o:L.c,h:L.c,l:L.c,c:L.c});L=a[a.length-1]}const p=L.c*(1+(Math.random()-.5)*.0006);L.c=p;L.h=Math.max(L.h,p);L.l=Math.min(L.l,p)});refresh()},1000);
   }
   refresh();
 }
@@ -230,7 +234,9 @@ function applyPine(){
 function draw(){
   const cv=$('cv'),dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
   cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
-  const c=D[tf];if(!c||!c.length||W<50||H<80)return;clampView();
+  const c=D[tf];if(W<50||H<80)return;
+  if(!c||!c.length){g.fillStyle='#ef5350';g.font='bold 16px system-ui';g.textAlign='center';g.fillText('NO REAL DATA',W/2,H/2-30);g.fillStyle='#9aa4b0';g.font='13px system-ui';
+    (failMsg||'Loading…').match(/.{1,34}(\s|$)/g).forEach((l,i)=>g.fillText(l.trim(),W/2,H/2-6+i*18));g.textAlign='left';return}clampView();
   const A=AN[tf]||(AN[tf]=smc(c)),N=vis,off=Math.max(0,Math.round(c.length-vis*.75-pan)),s=c.slice(off,off+N);
   const mc=s.reduce((a,x)=>a+x.c,0)/s.length;
   plots.forEach(p=>{const v=p.vals.slice(off,off+N).filter(x=>x!==null),m=v.length?v.reduce((a,b)=>a+b,0)/v.length:mc;
@@ -277,13 +283,18 @@ function draw(){
   if(hov!=null&&hov<R){g.strokeStyle='#556';g.setLineDash([3,3]);g.beginPath();g.moveTo(X(hk),0);g.lineTo(X(hk),Hh);g.stroke();g.setLineDash([])}
   g.fillStyle=k.c>=k.o?'#26a69a':'#ef5350';g.font='11px system-ui';
   g.fillText(`${$('sym').value} ${tf.toUpperCase()}  O ${k.o.toFixed(dec)}  H ${k.h.toFixed(dec)}  L ${k.l.toFixed(dec)}  C ${k.c.toFixed(dec)}`,6,14);
+  if(simMode){g.fillStyle='rgba(239,83,80,.28)';g.font='bold 24px system-ui';g.textAlign='center';g.fillText('SIMULATED - NOT REAL PRICES',R/2,mainH/2);g.textAlign='left';g.font='10px system-ui'}
   if(pan>1){g.fillStyle='#f0b429';g.fillText(`◀ ${Math.round(pan)} candles back`,6,28)}
 }
-function refresh(){ALL.forEach(t=>AN[t]=smc(D[t]));panel();applyPine();draw()}
+function refresh(){if(!D[tf]||!D[tf].length){draw();return}
+  ALL.forEach(t=>AN[t]=smc(D[t]));panel();applyPine();draw()}
 
 $('run').onclick=()=>{pineSrc=$('pine').value;refresh();show('Chart')};
 $('clr').onclick=()=>{pineSrc='';plots=[];$('log').textContent='Cleared.';draw()};
 $('sym').onchange=start;$('go').onclick=()=>{try{localStorage.setItem('tdkey',$('key').value.trim())}catch(e){}start();show('Chart')};try{$('key').value=localStorage.getItem('tdkey')||''}catch(e){}
+function paintMode(){const mb=$('modeBtn');mb.textContent=mode==='real'?'● REAL':'◌ FAKE';mb.style.background=mode==='real'?'#1f6f5f':'#f0b429';mb.style.color=mode==='real'?'#fff':'#000';$('mReal').style.background=mode==='real'?'#2f6feb':'';$('mSim').style.background=mode==='sim'?'#f0b429':'';$('mSim').style.color=mode==='sim'?'#000':''}
+function setMode(m){mode=m;try{localStorage.setItem('mode',m)}catch(e){}paintMode();start();show('Chart')}
+$('mReal').onclick=()=>setMode('real');$('mSim').onclick=()=>setMode('sim');$('status').onclick=()=>show('Set');$('modeBtn').onclick=()=>setMode(mode==='real'?'sim':'real');paintMode();
 addEventListener('resize',draw);
 start();
 setInterval(draw,1000);
